@@ -1,4 +1,4 @@
-from chain import Chain
+from chalicelib.chain import Chain
 import time
 
 class Workflow:

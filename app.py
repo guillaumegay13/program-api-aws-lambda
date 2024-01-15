@@ -1,7 +1,8 @@
 from chalice import Chalice
-from workflow import Workflow
+from chalicelib.workflow import Workflow
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
+import logging
 
 gptJsonModel = ChatOpenAI(
     #models : https://platform.openai.com/docs/models/gpt-3-5
@@ -27,12 +28,15 @@ class ProgramInput(BaseModel):
     age: int
 
 app = Chalice(app_name='aws-lambda-deployment')
+app.log.setLevel(logging.DEBUG)
 
 @app.route('/ping')
 def index():
     return {'hello': 'world'}
 
-@app.route('/api/program', methods=['POST'], content_types=['application/json'])
-async def create_program(input_data: ProgramInput):
-    result = Workflow(gptJsonModel, input_data.dict())
+@app.route('/program', methods=['POST'], content_types=['application/json'])
+def create_program():
+    request = app.current_request
+    instance = ProgramInput(**request.json_body)
+    result = Workflow(gptJsonModel, instance.dict())
     return result
