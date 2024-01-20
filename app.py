@@ -38,12 +38,12 @@ class MethodsInput(UserInput):
 class ProgramInput(UserInput):
     methods: dict
 
-@app.route('/provides_evidences', methods=['POST'], content_types=['application/json'])
+@app.route('/provide_evidences', methods=['POST'], content_types=['application/json'])
 async def provide_evidences():
     request = app.current_request
     userInput = UserInput(**request.json_body)
     trainProgramApi = TrainProgramApi(gptJsonModel, userInput.dict())
-    evidences = trainProgramApi.provide_evidences()
+    evidences = await trainProgramApi.provide_evidences()
     return evidences
 
 @app.route('/generate_methods', methods=['POST'], content_types=['application/json'])
@@ -51,8 +51,7 @@ async def generate_methods():
     request = app.current_request
     methodsInput = MethodsInput(**request.json_body)
     trainProgramApi = TrainProgramApi(gptJsonModel, methodsInput.dict())
-    evidences = trainProgramApi.provide_evidences()
-    methods = trainProgramApi.generate_methods(evidences)
+    methods = await trainProgramApi.generate_methods(methodsInput.dict())
     return methods
 
 @app.route('/generate_program', methods=['POST'], content_types=['application/json'])
@@ -60,9 +59,7 @@ async def generate_program(input_data: ProgramInput):
     request = app.current_request
     programInput = ProgramInput(**request.json_body)
     trainProgramApi = TrainProgramApi(gptJsonModel, programInput.dict())
-    evidences = trainProgramApi.provide_evidences()
-    methods = trainProgramApi.generate_methods(evidences)
-    program = trainProgramApi.generate_program(methods)
+    program = await trainProgramApi.generate_program(programInput.dict())
     return program
 
 # For the full workflow, only the User Input is needed
@@ -73,7 +70,8 @@ async def generate_train_program():
     trainProgramApi = TrainProgramApi(gptJsonModel, userInput.dict())
     # Run the end-to-end workflow
     # TODO : write the workflow code below instead of a class method
-    trainProgramApi.run_workflow()
+    program = await trainProgramApi.run_workflow()
+    return program
 
 # Ping GET endpoint for testing purposes
 @app.route('/ping')
