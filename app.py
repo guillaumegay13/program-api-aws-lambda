@@ -1,7 +1,9 @@
 from chalice import Chalice
-from workflow import Workflow
+from api import TrainProgramApi
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
+
+app = Chalice(app_name='aws-lambda-deployment')
 
 gptJsonModel = ChatOpenAI(
     #models : https://platform.openai.com/docs/models/gpt-3-5
@@ -16,7 +18,7 @@ gptJsonModel = ChatOpenAI(
 )
 
 # Define a Pydantic model for the JSON data input
-class ProgramInput(BaseModel):
+class UserInput(BaseModel):
     type: str
     gender: str
     level: str
@@ -26,13 +28,44 @@ class ProgramInput(BaseModel):
     weight: int
     age: int
 
-app = Chalice(app_name='aws-lambda-deployment')
+# Need all user input plus evidences as dict
+class MethodsInput(UserInput):
+    evidences: dict
 
-@app.route('/ping')
-def index():
-    return {'hello': 'world'}
+# Need all user input plus methods as dict
+class ProgramInput(UserInput):
+    methods: dict
 
-@app.route('/api/program', methods=['POST'], content_types=['application/json'])
-async def create_program(input_data: ProgramInput):
-    result = Workflow(gptJsonModel, input_data.dict())
-    return result
+@app.post("/api/provide_evidences/")
+async def provide_evidences(input_data: UserInput):
+    trainProgramApi = TrainProgramApi(gptJsonModel, input_data.dict())
+    evidences = trainProgramApi.provide_evidences()
+    return evidences
+
+@app.post("/api/generate_methods/")
+async def generate_methods(input_data: MethodsInput):
+    trainProgramApi = TrainProgramApi(gptJsonModel, input_data.dict())
+    evidences = trainProgramApi.provide_evidences()
+    methods = trainProgramApi.generate_methods(evidences)
+    return methods
+
+@app.post("/api/generate_program/")
+async def generate_program(input_data: ProgramInput):
+    trainProgramApi = TrainProgramApi(gptJsonModel, input_data.dict())
+    evidences = trainProgramApi.provide_evidences()
+    methods = trainProgramApi.generate_methods(evidences)
+    program = trainProgramApi.generate_program(methods)
+    return program
+
+# For the full workflow, only the User Input is needed
+@app.post("/api/generate_train_program/")
+async def generate_train_program(input_data: UserInput):
+    trainProgramApi = TrainProgramApi(gptJsonModel, input_data.dict())
+    # Run the end-to-end workflow
+    # TODO : write the workflow code below instead of a class method
+    trainProgramApi.run_workflow()
+
+# Ping GET endpoint for testing purposes
+@app.get("/api/ping")
+def ping():
+    return "Hello!"
